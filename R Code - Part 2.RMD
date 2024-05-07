@@ -1,0 +1,207 @@
+
+
+```{r}
+
+library(tree)
+library(readr)
+library(randomForest)
+library(ISLR)
+library(dplyr)
+library(car)
+library(psych)
+master <- read_csv("C:/Users/jayesh kartik/Desktop/master.csv")
+set.seed(1)
+
+clean<- master
+#renaming columns
+colnames(clean)[colnames(clean)=="HDI for year"] <- "HDI"
+colnames(clean)[colnames(clean)=="gdp_for_year ($)"] <- "gdp_for_year"
+colnames(clean)[colnames(clean)=="gdp_per_capita ($)"] <- "gdp_per_capita"
+clean$sex <- as.factor(clean$sex)
+clean$age <- as.factor(clean$age)
+clean$generation <- as.factor(clean$generation)
+clean$`suicides/100k pop` <- as.numeric(clean$`suicides/100k pop`)
+clean$`gdp_per_capita` <- as.numeric(clean$`gdp_per_capita`)
+clean$`gdp_for_year` <- as.numeric(clean$`gdp_for_year`)
+clean$`population` <- as.numeric(clean$`population`)
+clean$`HDI` <- as.numeric(clean$`HDI`)
+check <- select(clean, c(suicides_no, population,`suicides/100k pop`,HDI,gdp_for_year,gdp_per_capita)) 
+check2 <- glm(check$`suicides/100k pop` ~., data = check)
+vif(check2)
+
+
+
+cList <- c()
+y2013 <- c()
+y2012 <- c()
+y2011 <- c()
+y2010 <- c()
+y2009 <- c()
+countries <- data.frame(unique(master[,1]))
+for(x in countries$country){
+  clean <- master
+  clean <- filter(clean, country == x)
+  clean <- filter(clean, year > 1985)
+  clean <- filter(clean, !is.na(clean$`HDI for year`))
+  years <-data.frame(unique(clean[,2]))
+  #print(years$year)
+  if(length(years$year) > 8){
+    cList <- c(cList, x)
+  }
+  
+}
+
+#cList
+y2014 <- c()
+y2013 <- c()
+y2012 <- c()
+y2011 <- c()
+y2010 <- c()
+y2005 <- c()
+y2000 <- c()
+y1995 <- c()
+y1990 <- c()
+yearList <- c(1990, 1995, 2000, 2005, 2010, 2011,2012, 2013, 2014)
+for(x in yearList){
+  clean <- master
+  #clean <- filter(clean, country == x)
+  clean <- filter(clean, year == x)
+  clean <- filter(clean, !is.na(clean$`HDI for year`))
+  names <-data.frame(unique(clean[,1]))
+  if(x == 2014){
+    y2014 <- unique(clean[,1])
+  }
+  if(x == 2013){
+    y2013 <- unique(clean[,1])
+  }
+  if(x == 2012){
+    y2012 <- unique(clean[,1])
+  }
+  if(x == 2011){
+    y2011 <- unique(clean[,1])
+  }
+  if(x == 2010){
+    y2010 <- unique(clean[,1])
+  }
+  if(x == 2005){
+    y2005 <- unique(clean[,1])
+  }
+  if(x == 2000){
+    y2000 <- unique(clean[,1])
+  }
+  if(x == 1995){
+    y1995 <- unique(clean[,1])
+  }
+  if(x == 1990){
+    y1990 <- unique(clean[,1])
+  }
+  
+}
+output <- intersect(y2014, y2013)
+output <- intersect(output, y2012)
+output <- intersect(output, y2011)
+output <- intersect(output, y2010)
+output <- intersect(output, y2005)
+output <- intersect(output, y2000)
+output <- intersect(output, y1995)
+output <- intersect(output, y1990)
+
+output
+
+
+
+
+
+# cleaning the dataset
+
+
+clean<- master
+#renameing columns
+colnames(clean)[colnames(clean)=="HDI for year"] <- "HDI"
+colnames(clean)[colnames(clean)=="gdp_for_year ($)"] <- "gdp_for_year"
+colnames(clean)[colnames(clean)=="gdp_per_capita ($)"] <- "gdp_per_capita"
+
+#Check for Collinearity 
+check <-select(clean, c(suicides_no, population,`suicides/100k pop`,HDI,gdp_for_year,gdp_per_capita)) 
+cor(check)
+check2 <- glm(check$`suicides/100k pop` ~., data = check)
+vif(check2)
+
+#Changing columns from characters and doubles into factors and numeric to be useable to the model
+#clean$country <- as.factor(clean$country)
+clean$sex <- as.factor(clean$sex)
+clean$age <- as.factor(clean$age)
+clean$generation <- as.factor(clean$generation)
+clean$`suicides/100k pop` <- as.numeric(clean$`suicides/100k pop`)
+clean$`gdp_per_capita` <- as.numeric(clean$`gdp_per_capita`)
+clean$`gdp_for_year` <- as.numeric(clean$`gdp_for_year`)
+clean$`population` <- as.numeric(clean$`population`)
+clean$`HDI` <- as.numeric(clean$`HDI`)
+
+#Removing columns 
+clean <- clean[,-8]
+clean <- clean[,-5]
+head(clean)
+
+
+
+set.seed(1)
+years <- c(1990, 1995, 2000, 2005, 2010, 2011,2012, 2013, 2014)
+resultsPrediction <- data.frame("1990" = c(), "1995" = c(), "2000" = c(), "2005" = c(),"2010" = c(), "2011" = c(), "2012" = c(), "2013" = c(), "2014" = c())
+resultsMSE <- data.frame("1990" = c(), "1995" = c(), "2000" = c(), "2005" = c(),"2010" = c(), "2011" = c(), "2012" = c(), "2013" = c(), "2014" = c())
+count <- 0
+for(x in years){
+  count <- count +1
+  #Create train and test set 
+  train <- filter(clean, clean$year == x)
+  test <- train[ which(train$country == "Japan" | train$country == "Italy" | train$country == "Belize"),]
+  train <- train[!train$country == "Belize",]
+  train <- train[!train$country == "Japan",]
+  train <- train[!train$country == "Italy",]
+  train <- train[!is.na(train$HDI),]
+  
+  #Single Decesion Tree
+  tree.obj <- tree(train$`suicides/100k pop` ~ sex + age + population+ HDI + gdp_for_year + gdp_per_capita+generation  ,data=train)
+  cv.obj <- cv.tree(tree.obj,K=nrow(train))
+  best.size <- cv.obj$size[which.min(cv.obj$dev)] 
+  tree.obj <-prune.tree(tree.obj, best = best.size)
+  MSE <- min(cv.obj$dev)/nrow(train)
+  resultsMSE[1,count] <- MSE
+  predictionMSE <- sum( (predict(tree.obj, newdata = test) - test$`suicides/100k pop`)^2)/nrow(test)
+  resultsPrediction[1,count] <- predictionMSE
+  
+  #Bagging 
+  bag.model <- randomForest(train$`suicides/100k pop` ~  sex + age + population+ HDI + gdp_for_year +   gdp_per_capita+generation, data=train, ntree=800, mtry=ncol(train)-3)
+  MSE <- tail(bag.model$mse, n=1)
+  resultsMSE[2,count] <- MSE
+  predictionMSE <- sum( (predict(bag.model, newdata = test) - test$`suicides/100k pop`)^2)/nrow(test)
+  resultsPrediction[2,count] <- predictionMSE
+  
+  #Tree
+  forrest.model <- randomForest(train$`suicides/100k pop` ~  sex + age + population+ HDI +gdp_for_year + gdp_per_capita+generation, data=train, ntree=800, mtry=(ncol(train)-3)/3)
+  MSE <- tail(forrest.model$mse, n = 1)
+  resultsMSE[3,count] <- MSE
+  predictionMSE <- sum( (predict(forrest.model, newdata = test) - test$`suicides/100k pop`)^2)/nrow(test)
+  resultsPrediction[3,count] <- predictionMSE
+  
+  
+  resultsMSE
+  resultsPrediction
+}
+
+
+tree.obj
+cv.obj
+forrest.model
+
+plot(1:30)
+plot(forrest.model)
+text(tree.obj, pretty = 0)
+
+plot(cv.obj)
+
+plot(resultsMSE)
+plot(resultsPrediction)
+
+```
+
